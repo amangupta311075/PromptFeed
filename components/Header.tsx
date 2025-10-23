@@ -12,6 +12,7 @@ import TikTokIcon from './icons/TikTokIcon';
 import InstagramIcon from './icons/InstagramIcon';
 import FacebookIcon from './icons/FacebookIcon';
 import RedditIcon from './icons/RedditIcon';
+import LogoIcon from './icons/LogoIcon';
 
 interface HeaderProps {
   searchTerm: string;
@@ -70,6 +71,7 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
 }, ref) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   const handleApplyClick = () => {
     if (startDate && endDate) {
@@ -77,14 +79,19 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
     }
   };
 
+  const toggleSearch = () => setIsSearchVisible(prev => !prev);
+
   return (
     <header ref={ref} className="fixed top-0 left-0 right-0 bg-brand-light/80 dark:bg-brand-dark/80 backdrop-blur-sm border-b border-gray-200 dark:border-slate-800 z-10 p-4 transition-all duration-300">
       <div className="container mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold text-brand-dark dark:text-white tracking-tight">
-            Prompt<span className="text-brand-blue">Feed</span>
-          </h1>
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center gap-4">
+           <div className="flex items-center gap-2">
+            <LogoIcon />
+            <h1 className="text-2xl font-bold text-brand-dark dark:text-white tracking-tight">
+              Prompt<span className="text-brand-blue">Feed</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
              <div className="relative">
                 <select
                     value={selectedCountry}
@@ -109,29 +116,42 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
             >
               {theme === 'light' ? <MoonIcon /> : <SunIcon />}
             </button>
+             <button
+              onClick={toggleSearch}
+              className={`p-2 rounded-full transition-colors ${
+                isSearchVisible 
+                  ? 'bg-brand-blue/20 text-brand-blue' 
+                  : 'bg-gray-200 dark:bg-slate-800 text-brand-dark dark:text-brand-light hover:bg-gray-300 dark:hover:bg-slate-700'
+              }`}
+              aria-label="Toggle search"
+            >
+              <SearchIcon />
+            </button>
           </div>
         </div>
-         <div className="mt-4 flex flex-col md:flex-row items-center gap-2 w-full">
-            <div className="relative w-full md:w-1/3">
-              <input
-                type="text"
-                placeholder="Search prompt text..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-blue transition-colors text-gray-800 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-slate-500"
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-500">
-                <SearchIcon />
-              </div>
+         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isSearchVisible ? 'max-h-40 mt-4' : 'max-h-0'}`}>
+            <div className="flex flex-col md:flex-row items-center gap-2 w-full">
+                <div className="relative w-full md:w-1/3">
+                <input
+                    type="text"
+                    placeholder="Search prompt text..."
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="w-full bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-brand-blue transition-colors text-gray-800 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-slate-500"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-500">
+                    <SearchIcon />
+                </div>
+                </div>
+                <div className="relative w-full md:w-2/3">
+                <TagSearchBar 
+                    allTags={allTags}
+                    selectedTags={selectedTags}
+                    onSelectedTagsChange={onSelectedTagsChange}
+                />
+                </div>
             </div>
-            <div className="relative w-full md:w-2/3">
-              <TagSearchBar 
-                allTags={allTags}
-                selectedTags={selectedTags}
-                onSelectedTagsChange={onSelectedTagsChange}
-              />
-            </div>
-        </div>
+         </div>
         <div className="mt-4 flex flex-wrap justify-center gap-4">
           {categories.map((category) => (
              <div key={category} className="relative group">
