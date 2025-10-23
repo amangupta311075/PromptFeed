@@ -13,6 +13,7 @@ import InstagramIcon from './icons/InstagramIcon';
 import FacebookIcon from './icons/FacebookIcon';
 import RedditIcon from './icons/RedditIcon';
 import LogoIcon from './icons/LogoIcon';
+import RefreshIcon from './icons/RefreshIcon';
 
 interface HeaderProps {
   searchTerm: string;
@@ -32,6 +33,8 @@ interface HeaderProps {
   onSelectedTagsChange: (tags: string[]) => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  onRefreshPrompts: () => void;
+  isLoading: boolean;
 }
 
 const categoryIcons: { [key: string]: React.ReactNode } = {
@@ -68,6 +71,8 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
   onSelectedTagsChange,
   theme,
   onToggleTheme,
+  onRefreshPrompts,
+  isLoading,
 }, ref) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -80,6 +85,8 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
   };
 
   const toggleSearch = () => setIsSearchVisible(prev => !prev);
+
+  const isRefreshDisabled = selectedCategory === 'Viral Trends' || isLoading;
 
   return (
     <header ref={ref} className="fixed top-0 left-0 right-0 bg-brand-light/80 dark:bg-brand-dark/80 backdrop-blur-sm border-b border-gray-200 dark:border-slate-800 z-10 p-4 transition-all duration-300">
@@ -115,6 +122,14 @@ const Header = forwardRef<HTMLElement, HeaderProps>(({
               aria-label="Toggle theme"
             >
               {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            </button>
+            <button
+              onClick={onRefreshPrompts}
+              disabled={isRefreshDisabled}
+              className="p-2 rounded-full bg-gray-200 dark:bg-slate-800 text-brand-dark dark:text-brand-light hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Refresh prompts"
+            >
+              <RefreshIcon className={isLoading && selectedCategory !== 'Viral Trends' ? 'animate-spin' : ''} />
             </button>
              <button
               onClick={toggleSearch}

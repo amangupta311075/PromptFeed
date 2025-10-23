@@ -95,6 +95,12 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleRefreshPrompts = useCallback(() => {
+    if (selectedCategory !== 'Viral Trends') {
+      fetchAndSetPrompts(selectedCategory);
+    }
+  }, [selectedCategory, fetchAndSetPrompts]);
+
   // Fetch prompts when category changes
   useEffect(() => {
     fetchAndSetPrompts(selectedCategory);
@@ -171,6 +177,8 @@ const App: React.FC = () => {
         onSelectedTagsChange={setSelectedTags}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onRefreshPrompts={handleRefreshPrompts}
+        isLoading={isLoading}
       />
       <main className="container mx-auto px-4 pb-8 transition-all duration-300" style={{ paddingTop: `${headerHeight + 32}px` }}>
         {isLoading && <LoadingSpinner />}
