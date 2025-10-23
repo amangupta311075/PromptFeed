@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { Prompt } from './types';
 import { CATEGORIES, PLATFORMS, COUNTRIES } from './constants';
 import { generatePrompts } from './services/geminiService';
+import { viralPrompts } from './services/viralPromptsDb';
 import Header from './components/Header';
 import PromptCard from './components/PromptCard';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorDisplay from './components/ErrorDisplay';
+
+type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -16,14 +19,69 @@ const App: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('All');
   const [selectedCountry, setSelectedCountry] = useState<string>('Global');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedTheme = window.localStorage.getItem('theme');
+      if (storedTheme === 'light' || storedTheme === 'dark') {
+        return storedTheme;
+      }
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    }
+    return 'light';
+  });
+
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
+  useEffect(() => {
+    const headerElement = headerRef.current;
+    if (headerElement) {
+      const observer = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          setHeaderHeight(entry.contentRect.height);
+        }
+      });
+      observer.observe(headerElement);
+      return () => observer.disconnect();
+    }
+  }, []);
   
-  const fetchPrompts = useCallback(async (country: string, dateRange?: { start: string; end: string }) => {
+  const fetchAndSetPrompts = useCallback(async (category: string) => {
+    setIsLoading(true);
+    setError(null);
+    setSelectedTags([]); // Reset tags on new fetch
+
     try {
-      setIsLoading(true);
-      setError(null);
-      setSelectedTags([]); // Reset tags on new fetch
-      const generatedPrompts = await generatePrompts(country, dateRange);
-      setPrompts(generatedPrompts);
+      let promptsData: Prompt[] = [];
+      if (category === 'Viral Trends') {
+        // Load from local DB, no API call
+        promptsData = viralPrompts;
+      } else if (category === 'All') {
+        // Load viral from DB and fetch others from API
+        const generated = await generatePrompts('All');
+        promptsData = [...viralPrompts, ...generated];
+      } else {
+        // Fetch specific category from API
+        promptsData = await generatePrompts(category);
+      }
+      setPrompts(promptsData);
     } catch (e) {
       if (e instanceof Error) {
         setError(`Failed to generate prompts: ${e.message}. Please check your API key and try again.`);
@@ -36,20 +94,17 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
-  
-  // Initial fetch and fetch on country change
+
+  // Fetch prompts when category changes
   useEffect(() => {
-    fetchPrompts(selectedCountry);
-  }, [selectedCountry, fetchPrompts]);
+    fetchAndSetPrompts(selectedCategory);
+  }, [selectedCategory, fetchAndSetPrompts]);
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    setSelectedPlatform('All'); // Reset platform filter when category changes
-    setSelectedTags([]); // Reset tags when category changes
-  };
-
-  const handleDateRangeApply = (dateRange: { start: string; end: string }) => {
-    fetchPrompts(selectedCountry, dateRange);
+    setSelectedPlatform('All'); // Reset platform filter
+    setSelectedTags([]); // Reset tags
+    setDateRange(null); // Reset date range
   };
 
   const allTags = useMemo(() => {
@@ -65,11 +120,20 @@ const App: React.FC = () => {
       .filter(prompt => 
         selectedCategory === 'All' || prompt.category === selectedCategory
       )
-      .filter(prompt =>
-        selectedCategory !== 'Viral Trends' || selectedPlatform === 'All' || prompt.platform === selectedPlatform
-      )
+      .filter(prompt => { // Client-side filtering for Viral Trends
+        if (prompt.category === 'Viral Trends') {
+          const countryMatch = selectedCountry === 'Global' || prompt.country === selectedCountry;
+          const platformMatch = selectedPlatform === 'All' || prompt.platform === selectedPlatform;
+          const dateMatch = !dateRange || (
+            prompt.trendingDate &&
+            new Date(prompt.trendingDate) >= new Date(dateRange.start) &&
+            new Date(prompt.trendingDate) <= new Date(dateRange.end)
+          );
+          return countryMatch && platformMatch && dateMatch;
+        }
+        return true;
+      })
       .filter(prompt => {
-        // Tag filtering: prompt must have all selected tags
         if (selectedTags.length > 0) {
           if (!prompt.tags || prompt.tags.length === 0) return false;
           return selectedTags.every(tag => prompt.tags.includes(tag));
@@ -81,14 +145,15 @@ const App: React.FC = () => {
         if (!lowerCaseSearchTerm) return true;
         const inPromptText = prompt.promptText.toLowerCase().includes(lowerCaseSearchTerm);
         const inTargetModel = prompt.targetModel.toLowerCase().includes(lowerCaseSearchTerm);
-        // Note: We don't search tags here anymore as it's handled by the dedicated tag filter
-        return inPromptText || inTargetModel;
+        const inTags = prompt.tags?.some(tag => tag.toLowerCase().includes(lowerCaseSearchTerm));
+        return inPromptText || inTargetModel || inTags;
       });
-  }, [prompts, searchTerm, selectedCategory, selectedPlatform, selectedTags]);
+  }, [prompts, searchTerm, selectedCategory, selectedPlatform, selectedTags, selectedCountry, dateRange]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
+    <div className="min-h-screen bg-brand-light dark:bg-brand-dark text-gray-800 dark:text-slate-200 font-sans transition-colors duration-300">
       <Header
+        ref={headerRef}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         selectedCategory={selectedCategory}
@@ -100,12 +165,14 @@ const App: React.FC = () => {
         selectedCountry={selectedCountry}
         onCountryChange={setSelectedCountry}
         countries={COUNTRIES}
-        onDateRangeApply={handleDateRangeApply}
+        onDateRangeApply={setDateRange}
         allTags={allTags}
         selectedTags={selectedTags}
         onSelectedTagsChange={setSelectedTags}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
-      <main className="container mx-auto px-4 py-8 pt-64 sm:pt-48 md:pt-40">
+      <main className="container mx-auto px-4 pb-8 transition-all duration-300" style={{ paddingTop: `${headerHeight + 32}px` }}>
         {isLoading && <LoadingSpinner />}
         {error && <ErrorDisplay message={error} />}
         {!isLoading && !error && (
@@ -116,7 +183,7 @@ const App: React.FC = () => {
           </div>
         )}
          {!isLoading && !error && filteredPrompts.length === 0 && (
-           <div className="text-center py-16 text-slate-500">
+           <div className="text-center py-16 text-gray-500 dark:text-slate-500">
              <h2 className="text-2xl font-bold">No Prompts Found</h2>
              <p className="mt-2">Try adjusting your search or filter criteria.</p>
            </div>

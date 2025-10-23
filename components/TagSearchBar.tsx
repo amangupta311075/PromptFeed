@@ -51,12 +51,12 @@ const TagSearchBar: React.FC<TagSearchBarProps> = ({ allTags, selectedTags, onSe
 
     return (
         <div className="relative w-full" ref={containerRef}>
-            <div className="flex flex-wrap items-center w-full bg-slate-800 border border-slate-700 rounded-lg p-1 pr-2 focus-within:ring-2 focus-within:ring-brand-blue transition-colors">
+            <div className="flex flex-wrap items-center w-full bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg p-1 pr-2 focus-within:ring-2 focus-within:ring-brand-blue transition-colors">
                 <div className="flex flex-wrap gap-1 items-center">
                     {selectedTags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1.5 bg-brand-blue/30 text-brand-blue text-xs font-semibold px-2 py-1 rounded">
+                        <span key={tag} className="flex items-center gap-1.5 bg-brand-blue/20 text-brand-blue text-xs font-semibold px-2 py-1 rounded">
                             {tag}
-                            <button onClick={() => handleRemoveTag(tag)} className="text-brand-blue hover:text-white">
+                            <button onClick={() => handleRemoveTag(tag)} className="text-brand-blue hover:text-blue-400 dark:hover:text-white">
                                 <XIcon />
                             </button>
                         </span>
@@ -68,16 +68,16 @@ const TagSearchBar: React.FC<TagSearchBarProps> = ({ allTags, selectedTags, onSe
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onFocus={() => setIsFocused(true)}
-                    className="flex-grow bg-transparent p-1 pl-2 text-sm focus:outline-none min-w-[120px]"
+                    className="flex-grow bg-transparent p-1 pl-2 text-sm focus:outline-none min-w-[120px] text-gray-800 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-slate-500"
                 />
             </div>
             {showSuggestions && (
-                <ul className="absolute z-20 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto animate-fade-in">
+                <ul className="absolute z-20 w-full mt-1 bg-white dark:bg-brand-dark-blue border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto animate-fade-in">
                     {suggestions.map(tag => (
                         <li
                             key={tag}
                             onClick={() => handleSelectTag(tag)}
-                            className="px-4 py-2 text-sm cursor-pointer hover:bg-brand-blue hover:text-white"
+                            className="px-4 py-2 text-sm cursor-pointer text-gray-800 dark:text-gray-200 hover:bg-brand-blue hover:text-white"
                         >
                             {tag}
                         </li>
